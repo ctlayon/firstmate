@@ -15,7 +15,7 @@ LOCK="$STATE/.lock"
 mkdir -p "$STATE"
 
 # Known harness command names; extend when a new adapter is verified.
-HARNESS_RE='claude|codex|opencode|^pi$'
+HARNESS_RE='claude|codex|opencode|copilot|^pi$'
 
 harness_pid() {
   local pid=$$ comm args
@@ -25,9 +25,10 @@ harness_pid() {
     if printf '%s' "$(basename "$comm")" | grep -qE "$HARNESS_RE"; then
       echo "$pid"; return 0
     fi
-    # Bare interpreter (e.g. node): match the harness name in its script path.
+    # Bare interpreter (e.g. node), or a bundled-node binary whose thread name is
+    # "MainThread" (Copilot CLI): match the harness name in its script path.
     case "$comm" in
-      *node*|*python*) printf '%s' "$args" | grep -qE "$HARNESS_RE" && { echo "$pid"; return 0; } ;;
+      *node*|*python*|MainThread*) printf '%s' "$args" | grep -qE "$HARNESS_RE" && { echo "$pid"; return 0; } ;;
     esac
     pid=$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')
     [ -n "$pid" ] && [ "$pid" -gt 1 ] || return 1

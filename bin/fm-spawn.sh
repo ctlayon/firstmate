@@ -118,6 +118,12 @@ launch_template() {
       fi
       ;;
     opencode) printf '%s' 'OPENCODE_CONFIG_CONTENT='\''{"permission":{"*":"allow"}}'\'' opencode --prompt "$(cat __BRIEF__)"' ;;
+    copilot)
+      # Interactive TUI (-i runs the brief, then stays open for steering). The
+      # turn-end signal rides a worktree-local agentStop hook (installed below),
+      # not the launch command. COPILOT_AUTO_UPDATE=false stops a mid-task TUI
+      # restart from surprising the watcher (Copilot self-updates by default).
+      printf '%s' 'COPILOT_AUTO_UPDATE=false copilot -i "$(cat __BRIEF__)" --allow-all-tools --allow-all-paths' ;;
     pi)
       if [ "$kind" = secondmate ]; then
         printf '%s' 'pi "$(cat __BRIEF__)"'
@@ -367,6 +373,19 @@ export const FmTurnEnd = async ({ \$ }) => ({
 })
 EOF
       exclude_path '.opencode/plugins/fm-turn-end.js'
+      ;;
+    copilot*)
+      # Copilot reads .github/hooks/*.json from the worktree (repo) root. The
+      # agentStop event fires when the main agent finishes a turn (the Copilot
+      # equivalent of claude's Stop hook). touch prints nothing to stdout, so the
+      # hook produces no decision and never forces a continuation. Kept out of
+      # git's view like the other adapters' hooks so it cannot dirty the worktree
+      # or block teardown.
+      mkdir -p "$WT/.github/hooks"
+      cat > "$WT/.github/hooks/fm-turn-end.json" <<EOF
+{"version":1,"hooks":{"agentStop":[{"type":"command","bash":"touch '$TURNEND'"}]}}
+EOF
+      exclude_path '.github/hooks/fm-turn-end.json'
       ;;
     pi*)
       # Written OUTSIDE the worktree: pi's project-trust gate fires on any extension

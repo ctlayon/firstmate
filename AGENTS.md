@@ -195,6 +195,20 @@ fm-spawn keeps the turn-end extension in `state/`, outside the worktree, because
 The extension must listen for pi's `turn_end` event, not `agent_end`, so the watcher wakes after each completed turn instead of only when the whole agent run exits.
 Environment marker for harness detection: pi sets `PI_CODING_AGENT=true` for its children.
 
+### copilot (VERIFIED 2026-06-23, Copilot CLI 1.0.64-3)
+
+| Fact | Value |
+|---|---|
+| Busy-pane signature | `esc cancel` (shown as `◎ Working   esc cancel`) |
+| Exit command | `/exit` (drops back to the shell; the window survives) |
+| Interrupt | single Escape |
+| Skill invocation | natural language (e.g. "run the no-mistakes validation pipeline"); Copilot invokes skills by description, with no user-typed `/<skill>` form |
+
+Launch is `copilot -i "$(cat brief)" --allow-all-tools --allow-all-paths` (interactive TUI that auto-runs the brief then stays open for steering); `COPILOT_AUTO_UPDATE=false` is set so a background self-update cannot restart the TUI mid-task.
+Folder-trust dialog ("Confirm folder trust / Do you trust the files in this folder?") fires on the first run in any not-yet-trusted directory, including every fresh worktree - accept with `bin/fm-send.sh <window> --key Enter` (option 1, "Yes", session-only) and verify the brief started processing.
+Turn-end signal: fm-spawn writes a worktree-local `.github/hooks/fm-turn-end.json` with an `agentStop` command hook (the Copilot equivalent of claude's `Stop`) that touches `state/<id>.turn-ended`; the file is git-excluded so it never dirties the worktree or blocks teardown. The hook loads once folder trust is granted and fires at every turn boundary (verified: the touch lands after the first turn completes).
+Environment marker for harness detection: Copilot sets `COPILOT_CLI=1` for its children (and `COPILOT_LOADER_PID` to the session-stable harness PID); its process thread name is `MainThread`, so ancestry matching falls back to the `copilot` token in the process args.
+
 ## 5. Recovery (run at every session start, after bootstrap)
 
 You may have been restarted mid-flight.

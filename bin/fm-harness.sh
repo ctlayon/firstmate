@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Detect the agent harness this process tree runs on.
-# Usage: fm-harness.sh         print own harness: claude|codex|opencode|pi|unknown
+# Usage: fm-harness.sh         print own harness: claude|codex|opencode|pi|copilot|unknown
 #        fm-harness.sh crew    print the effective crewmate harness
 #                              (config/crew-harness; "default" resolves to own)
 # Detection layers: verified environment markers first, then process ancestry.
@@ -16,6 +16,7 @@ detect_own() {
   # Layer 1: environment markers for verified harnesses.
   [ "${CLAUDECODE:-}" = "1" ] && { echo claude; return; }
   [ "${PI_CODING_AGENT:-}" = "true" ] && { echo pi; return; }
+  [ "${COPILOT_CLI:-}" = "1" ] && { echo copilot; return; }
   # Layer 2: walk the parent chain and match the command name.
   local pid=$$ comm args
   for _ in 1 2 3 4 5 6 7 8; do
@@ -24,14 +25,17 @@ detect_own() {
       *claude*) echo claude; return ;;
       *codex*) echo codex; return ;;
       *opencode*) echo opencode; return ;;
+      *copilot*) echo copilot; return ;;
       pi) echo pi; return ;;
-      node*|python*)
-        # Bare interpreter: match the harness name in its script path.
+      node*|python*|MainThread*)
+        # Bare interpreter (e.g. node) or a bundled-node binary whose thread name
+        # is "MainThread" (Copilot CLI): match the harness name in its script path.
         args=$(ps -o args= -p "$pid" 2>/dev/null)
         case "$args" in
           *claude*) echo claude; return ;;
           *codex*) echo codex; return ;;
           *opencode*) echo opencode; return ;;
+          *copilot*) echo copilot; return ;;
           *" pi "*|*/pi) echo pi; return ;;
         esac ;;
     esac
