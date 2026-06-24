@@ -324,12 +324,16 @@ fi
 
 W="fm-$ID"
 T="$SES:$W"
-if tmux list-windows -t "$SES" -F '#{window_name}' | grep -qx "$W"; then
+# Trailing colon forces tmux to read the target as a session, not a window index.
+# Critical when the session is numerically named (e.g. "0"), where a bare "$SES"
+# is parsed as window index 0 ("index 0 in use") instead of session 0.
+SEST="$SES:"
+if tmux list-windows -t "$SEST" -F '#{window_name}' | grep -qx "$W"; then
   echo "error: window $T already exists" >&2
   exit 1
 fi
 
-tmux new-window -d -t "$SES" -n "$W" -c "$PROJ_ABS"
+tmux new-window -d -t "$SEST" -n "$W" -c "$PROJ_ABS"
 if [ "$KIND" != secondmate ]; then
   tmux send-keys -t "$T" 'treehouse get' Enter
 
