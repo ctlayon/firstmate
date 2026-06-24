@@ -123,7 +123,12 @@ launch_template() {
       # turn-end signal rides a worktree-local agentStop hook (installed below),
       # not the launch command. COPILOT_AUTO_UPDATE=false stops a mid-task TUI
       # restart from surprising the watcher (Copilot self-updates by default).
-      printf '%s' 'COPILOT_AUTO_UPDATE=false copilot -i "$(cat __BRIEF__)" --allow-all-tools --allow-all-paths' ;;
+      # GITHUB_COPILOT_PROMPT_MODE_REPO_HOOKS=true forces Copilot to load the
+      # worktree's .github/hooks/ in prompt mode: otherwise repo hooks load only
+      # when the folder is persistently trusted, but fresh worktrees are only
+      # session-trusted (never added to trustedFolders), so the turn-end hook
+      # would silently never fire and turn-boundary wakes would be lost.
+      printf '%s' 'COPILOT_AUTO_UPDATE=false GITHUB_COPILOT_PROMPT_MODE_REPO_HOOKS=true copilot -i "$(cat __BRIEF__)" --allow-all-tools --allow-all-paths' ;;
     pi)
       if [ "$kind" = secondmate ]; then
         printf '%s' 'pi "$(cat __BRIEF__)"'
